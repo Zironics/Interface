@@ -1,21 +1,11 @@
 import os
-import networkx as nx
-from pattern.en import conjugate,lemma
-import xml.etree.ElementTree as ET
-import csv
-from .centrality import *
 app_directory = os.path.dirname(os.path.dirname( __file__ ))
     
-#djad part : 
+import networkx as nx
 
-
-#def object_name(G,k): return G.nodes[k]['xml_obj'].findtext('./name')
 def object_name(G,k): return G.nodes[k]['name']
-#def attributes(G,k): return [attribute.findtext('.') for attribute in G.nodes[k]['xml_obj'].findall('./attributes/attribute')]
 def attributes(G,k): return G.nodes[k]['attributes']
 def relation_name(G,subject_id,object_id) -> str: return G.edges[(subject_id,object_id)]['predicate']
-def draw(G): return nx.draw_networkx(G,labels={k:object_name(G,k) for k in G.nodes})
-def captions(image_id): return [x.findtext('.') for x in ET.parse(f'./image_data/{image_id}').findall('./captions/caption')]
 
 def extend_nodes(G,T,key=None):
     """
@@ -48,7 +38,6 @@ def rev(l:list) -> list:
     r = l.copy()
     r.reverse()
     return r
-
 
 def extraire_arbre(Cluster:nx.DiGraph) -> nx.DiGraph: 
     T = nx.Graph()
@@ -89,10 +78,17 @@ def has_execluded_predicate(G,path,execluded):
             return True
     return False
 
-
+from . import centrality as C
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
 from pattern.text.en import conjugate,lemma,tenses,article,singularize
+
+def hack(): 
+    try:
+        lemma('gave')
+    except:
+        pass
+hack()
 
 execluded = [
 'has',
@@ -106,13 +102,12 @@ execluded = [
 ]
 
 def sentence(image_id:str,method:str,seuil:float,nb_obj:int,nb_rel:int,nb_attr:int) -> str:    
-    G = CreateGraph(image_id,nb_obj,nb_rel,nb_attr)
-    Cluster = centrality_cluster(G,seuil,method)
+    G = C.CreateGraph(image_id,nb_obj,nb_rel,nb_attr)
+    Cluster = C.centrality_cluster(G,seuil,method)
     
     if not Cluster:
         print("Cluster vide")
         return
-    print(Cluster.nodes(data=True))
     
     OT,UT = extraire_arbre(Cluster)
 
@@ -206,7 +201,7 @@ def sentence(image_id:str,method:str,seuil:float,nb_obj:int,nb_rel:int,nb_attr:i
 
         else:
             pass
-            #print('not flow')
+            print('not flow')
             #print([object_name(OT,x) for x in path])
             #for i  in range(len(path)-1):
             #    s,o = getEdge(OT,path[i],path[i+1])
@@ -214,9 +209,9 @@ def sentence(image_id:str,method:str,seuil:float,nb_obj:int,nb_rel:int,nb_attr:i
     
 
     if pos and neg:
-        phrase = phrase + " which" + ' and'.join(neg) + ',' + ' and'.join(pos) 
+        phrase = phrase + ", which" + ' and'.join(neg) + ',' + ' and'.join(pos) 
     elif neg:
-        phrase = "There is " + phrase + " which" + ' it and'.join(neg) + ' it'
+        phrase = "There is " + phrase + ", which" + ' it and'.join(neg) + ' it'
     elif pos:
         phrase = phrase + ' and'.join(pos)
     else:

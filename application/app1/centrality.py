@@ -1,8 +1,8 @@
 import networkx as nx
-import os
-from pattern.en import conjugate,lemma
 import xml.etree.ElementTree as ET
+import os
 import csv
+
 def degree_sortant(G):
     return nx.degree_centrality(G.reverse())
 
