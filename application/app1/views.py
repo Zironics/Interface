@@ -3,7 +3,7 @@ from django.shortcuts import render,redirect
 from .forms import *
 from django.http.response import HttpResponse
 from django.http import HttpResponse 
-from .functions import *
+from .djad import *
 from .decomposition import *
 import os
 
