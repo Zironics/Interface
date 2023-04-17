@@ -178,7 +178,7 @@ def centrality_cluster(G:nx.Graph,seuil:float,centrality):
     big = max(l,key=lambda  x: x[1])
 
     if big[1] == 0:
-        big = select_big(G,l)
+        big = select_biggest_area(G,l)
 
     ds = set()
     ds.add(big[0])

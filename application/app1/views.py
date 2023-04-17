@@ -41,9 +41,11 @@ def affichage(request):
                 'method':method,
                 'seuil':seuil,
                 'nb_obj':nb_obj,
+                'nb_att':nb_att,
+                'algo':algo,
                 'nb_rel':nb_rel,
                 })  
-                return render(request,"caption.html",{"result":s,"img":photo,'captions':captions,'form':form})
+                return render(request,"caption.html",{"id":id,"result":s,"img":photo,'captions':captions,'form':form})
             else :
                 #error
                 pass
