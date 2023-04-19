@@ -38,7 +38,6 @@ def treat_xml_obj(x:ET.Element,attrs:list) -> dict:
         else:
             r[sub.tag] = sub.text
     r['attributes'] = attributes
-    print("r :",r)
     return r
 
 def CreateGraph(image_id:str,nb_obj = 0,nb_rel = 0,nb_attr = 0):
@@ -68,6 +67,7 @@ def CreateGraph(image_id:str,nb_obj = 0,nb_rel = 0,nb_attr = 0):
         Max = max(nb_obj,nb_rel,nb_attr)
         Tout_Objs = None
         Tout_Preds = None
+        Tout_Attr = None
 
     if nb_obj and not Tout_Objs:
         obj_csv = csv.reader(open('./params/object_params.csv'))
