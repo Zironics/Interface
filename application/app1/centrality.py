@@ -12,6 +12,12 @@ def degree(G):
         nodes[k] += v
     return nodes
 
+def dict_add(d1:dict,d2:dict) -> dict:
+    return {k:d1[k]+d2[k] for k in d1.keys() if k in d2.keys()}
+
+def extend_method(method:callable) -> callable:
+    return  lambda G: dict_add(method(G),method(G.reverse()))
+
 Centrality = {
               "betweenness":nx.betweenness_centrality,
               "degree":degree,
