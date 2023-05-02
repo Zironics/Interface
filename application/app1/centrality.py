@@ -12,6 +12,12 @@ def degree(G):
         nodes[k] += v
     return nodes
 
+def dict_add(d1:dict,d2:dict) -> dict:
+    return {k:d1[k]+d2[k] for k in d1.keys() if k in d2.keys()}
+
+def extend_method(method:callable) -> callable:
+    return  lambda G: dict_add(method(G),method(G.reverse()))
+
 Centrality = {
               "betweenness":nx.betweenness_centrality,
               "degree":degree,
@@ -33,10 +39,16 @@ def treat_xml_obj(x:ET.Element,attrs:list) -> dict:
         if sub.tag == 'object' or sub.tag == 'attributes':
             continue
         if sub.tag == 'attribute':
-            if not attrs or sub.text in attrs:
+            for a in attrs:
+                if a['Name'] == x.findtext('./name'):
+                    attr = a['attributes']
+                    break
+            
+            if not attrs or sub.text in attr:
                 attributes.append(sub.text)
         else:
             r[sub.tag] = sub.text
+
     r['attributes'] = attributes
     return r
 
@@ -63,8 +75,8 @@ def CreateGraph(image_id:str,nb_obj = 0,nb_rel = 0,nb_attr = 0):
     global Tout_Attr
     global Max
 
-    if nb_obj>Max or nb_rel>Max or nb_attr>Max:
-        Max = max(nb_obj,nb_rel,nb_attr)
+    if nb_obj>Max or nb_rel>Max:
+        Max = max(nb_obj,nb_rel)
         Tout_Objs = None
         Tout_Preds = None
 
@@ -82,14 +94,32 @@ def CreateGraph(image_id:str,nb_obj = 0,nb_rel = 0,nb_attr = 0):
     if Tout_Preds:
         preds = Tout_Preds[:int(nb_rel)+1]
 
+    def parse_int(i):
+            try:
+                return int(i)
+            except:
+                return 0
+
+    def treat_attr_dict(attr):
+        attr['Nb1'] = parse_int(attr['Nb1'])
+        attr['Nb2'] = parse_int(attr['Nb2'])
+        return attr
+
     if nb_attr and not Tout_Attr:
-        attr_csv = csv.reader(open('./params/attribute_params.csv'))
-        Tout_Attr = [attr[0] for attr in attr_csv][1:Max+1]
+        attr_csv = csv.DictReader(open('./params/attributes.csv'))
+        Tout_Attr = [treat_attr_dict(attr) for attr in attr_csv]
+
 
     if Tout_Attr:
-        attrs = Tout_Attr[:int(nb_attr)+1]
+        print()
+        for attr in Tout_Attr:      
+            attributes = []
+            if attr['Nb1'] >= nb_attr:
+                attributes.append(attr['Attribute 1'])
+            if attr['Nb2'] >= nb_attr:
+                attributes.append(attr['Attribute 2'])
 
-
+            attrs.append({'Name':attr['Name'],'attributes':attributes})
     
     
     img = ET.parse(f'./image_data/{image_id}').getroot()
