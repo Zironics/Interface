@@ -14,17 +14,28 @@
 
 <body class="position-relative d-flex flex-column align-items-center">
 
-    <center class="m-2"> image : {{id}}</center>
-    <div class="d-flex gap-2">
-        <img src="{%static img %}"/>
+    
+    <div class="d-flex top">
+        
+        <div class="image-container">
+            <div class="image-id d-flex justify-content-center"> image : {{id}}</div>
+            <img src="{%static img %}"/>
+        </div>
+        <div class="sep"></div>
         <div class="d-flex flex-column gap-3">
+            <center class="caption-title"> Captions du dataset </center>
+            <ul class="d-flex flex-column justify-content-evenly flex-grow-1">
             {%for cap in captions%}
-                <div>{{cap}}</div>
+                <li>{{cap}}</li>
             {%endfor%}
+            </ul>
         </div>
     </div>
 
-    <div>{{result}}</div>
+    <div class="result-container d-flex flex-column align-items-center">
+        <h2>Resultat</h2>
+        <div class="result">{{result}}</div>
+    </div>
     <form  method="post"  class="d-flex  flex-wrap justify-content-center align-items-center gap-3 mt-4" enctype="multipart/form-data">
         {% csrf_token %}
        {%for field in form%}
@@ -33,7 +44,7 @@
           {{field}}
         </div>
        {%endfor%}
-        <button type="submit" class="btn btn-primary align-self-end">submit</button>
+        <button type="submit" class="btn btn-primary">submit</button>
     </form>
 
 </body>

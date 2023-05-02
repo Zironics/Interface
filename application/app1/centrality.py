@@ -38,7 +38,6 @@ def treat_xml_obj(x:ET.Element,attrs:list) -> dict:
         else:
             r[sub.tag] = sub.text
     r['attributes'] = attributes
-    print("r :",r)
     return r
 
 def CreateGraph(image_id:str,nb_obj = 0,nb_rel = 0,nb_attr = 0):
@@ -174,6 +173,7 @@ def centrality_cluster(G:nx.Graph,seuil:float,centrality):
     nodes = Centrality[centrality](G)
 
     l = list(nodes.items())
+    print("l :")
     print(l)
     big = max(l,key=lambda  x: x[1])
 

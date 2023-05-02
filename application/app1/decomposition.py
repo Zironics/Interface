@@ -2,7 +2,7 @@ import networkx as nx
 from nltk.tag import pos_tag
 from nltk.tokenize import word_tokenize
 from .centrality import *
-from pattern.en import singularize,pluralize,conjugate
+from pattern.en import singularize,pluralize,conjugate,lemma
 
 app_directory = os.path.dirname(os.path.dirname( __file__ ))
 
@@ -36,17 +36,30 @@ def isplural(pluralForm):
 
 def traiter_predicat(subject,predicat):
     a = predicat.split(" ")[0]
+    
     if a in ['are',"is"]:
         predicat = " ".join(predicat.split(' ')[1:])
-    
-    if predicat in ['has','has a','of','with','of a']:
+
+    if predicat in ['has','has a','of','of a']:
         return predicat
     
     elif isplural(subject):
         return " ".join(["are",predicat])
     else :
         return " ".join(["is",predicat])
-    
+
+def conjugate_pred(predicat):
+    tags = pos_tag(word_tokenize(predicat),tagset='universal')
+    pred = []
+    for t in tags:
+        if t[1] == "VERB":
+            p = conjugate(lemma(t[0]),tense = "present",mood ="indicative",aspect = "progressive")
+        else :
+            p = t[0]
+        pred.append(p)
+    return " ".join(pred)
+
+
 
 
 def selection_determinant(subject,attribut):
@@ -82,7 +95,6 @@ def process_clique(G):
     return H
 
 def get_name(info):
-    print("info :",info)
     return info['name']
 
 
@@ -106,7 +118,7 @@ def is_clique(edges):
     return len(edges) >= 3
 
 def choose_edge_for_node(G,node,exclude = []):
-    predicate_to_exclude = ['wearing','has','has a','of','of a']
+    predicate_to_exclude = ['wearing',"wears",'has','has a','of','of a']
     if len(G.out_edges(node)) > 0:
         for x in G.out_edges(node,data = True):
             if x[2]['predicate'].lower() not in predicate_to_exclude and x[1] not in exclude:
@@ -129,7 +141,7 @@ def choose_edge_for_node(G,node,exclude = []):
         return None
 
 def choose_two_edges(G,central):
-    predicate_to_exclude = ['wearing','has','has a','of','of a']
+    predicate_to_exclude = ['wearing',"wears",'has','has a','of','of a']
     edges = []
     if len(G.out_edges(central)) > 0:
         if len(G.out_edges(central)) == 1:
@@ -146,7 +158,6 @@ def choose_two_edges(G,central):
             return edges
         else :
             for x in G.out_edges(central,data = True):
-                print("predicate : ",x)
                 if x[2]['predicate'].lower() not in predicate_to_exclude:
                     edges.append(x)
             if len(edges) == 2:
@@ -187,7 +198,7 @@ def choose_two_edges(G,central):
                             if len(edges) == 2:
                                 return edges
     elif len(G.in_edges(central)) > 0:
-        print("in edges")
+        
         if len(G.in_edges(central)) == 1:
             e1 = list(G.in_edges(central))[0]
             edges.append(e1)
@@ -328,17 +339,22 @@ def graph_to_sentence(G):
                 # si meme relations noms different :
                 
                 if (obj0 != obj1 and predicat0 == predicat1):
+                    if pos_tag(word_tokenize(predicat0),tagset='universal')[0][-1] == 'VERB':
+                        predicat0 = conjugate(lemma(predicat0.lower()),tense = "present",mood ="indicative",aspect = "progressive")
                     predicat0 = traiter_predicat(obj0,predicat0)
                     
                     return " ".join([det0,attributes_obj0,obj0,"and",det1,attributes_obj1,obj1,predicat0.lower(),det2,attributes_obj2,obj2])
             
                 # si relations differentes :
                 elif (predicat0 != predicat1):
+                    predicat0 = conjugate_pred(predicat0)
+                    predicat1 = conjugate_pred(predicat1)
+                    
                     predicat0 = traiter_predicat(obj0,predicat0)
                     predicat1 = traiter_predicat(obj1,predicat1)
 
                     return " ".join([det0,attributes_obj0,obj0,predicat0.lower(),det2,attributes_obj2,obj2,'and',det1,
-                                    attributes_obj1,obj1,predicat1.lower(),"the same",obj2])
+                                    attributes_obj1,obj1,predicat1.lower(),"that",obj2])
                 
             # cas 2 sortants
             if  len(G.out_edges(degree2)) == 2:
@@ -356,17 +372,24 @@ def graph_to_sentence(G):
                 det1 = selection_determinant(obj1,attributes_obj1)
                 det2 = selection_determinant(obj2,attributes_obj2)
 
-                print(predicat0,predicat1)
-                if pos_tag(word_tokenize(predicat0),tagset='universal')[0][-1] == 'VERB':
-                    predicat0 = conjugate(lemma(predicat0.lower()),tense = "present",mood ="indicative",aspect = "progressive")
-                if pos_tag(word_tokenize(predicat0),tagset='universal')[0][-1] == 'VERB':
-                    predicat1 = conjugate(lemma(predicat1.lower()),tense = "present",mood ="indicative",aspect = "progressive")
+                predicat0 = conjugate_pred(predicat0)
+                predicat1 = conjugate_pred(predicat1)
 
                 predicat0 = traiter_predicat(degree2,predicat0).lower()
                 predicat1 = traiter_predicat(degree2,predicat1).lower()
                 
+                if (obj0 == obj1 and predicat1 == predicat0):
+                    try : 
+                        if isplural(obj0):
+                            print("plural")
+                        else :
+                            obj0 = pluralize(obj0)
+                    except:
+                        pass
+                    return " ".join([det2,attributes_obj2,obj2,predicat0.lower(),"some",obj0])
+            
                 if (obj0 == obj1):
-                    return " ".join([det2,attributes_obj2,obj2,"that",predicat0.lower(),det0,attributes_obj0,obj0,',',
+                    return " ".join([det2,attributes_obj2,obj2,predicat0.lower(),det0,attributes_obj0,obj0,',',
                                     predicat1.lower(),"another",attributes_obj1,obj1])
             
                 # si noms different :
@@ -380,23 +403,47 @@ def graph_to_sentence(G):
                 predicat0 = get_predicat(other_noeds[0],degree2,edges)
                 if predicat0:
                     predicat1 = get_predicat(degree2,other_noeds[1],edges)
+
+                    if pos_tag(word_tokenize(predicat0),tagset='universal')[0][-1] == 'VERB':
+                        predicat0 = conjugate(lemma(predicat0.lower()),tense = "present",mood ="indicative",aspect = "progressive")
+                    if pos_tag(word_tokenize(predicat0),tagset='universal')[0][-1] == 'VERB':
+                        predicat1 = conjugate(lemma(predicat1.lower()),tense = "present",mood ="indicative",aspect = "progressive")
+
+                    predicat0 = traiter_predicat(other_noeds[0],predicat0)
+                    predicat1 = traiter_predicat(degree2,predicat1)
+
                     obj0 = get_name(G.nodes[other_noeds[0]])
                     obj1 = get_name(G.nodes[other_noeds[1]])
                 else :
                     predicat1 = get_predicat(degree2,other_noeds[0],edges)
                     predicat0 = get_predicat(other_noeds[1],degree2,edges)
+                    
+                    
+                    if pos_tag(word_tokenize(predicat0),tagset='universal')[0][-1] == 'VERB':
+                        predicat0 = conjugate(lemma(predicat0.lower()),tense = "present",mood ="indicative",aspect = "progressive")
+                    if pos_tag(word_tokenize(predicat0),tagset='universal')[0][-1] == 'VERB':
+                        predicat1 = conjugate(lemma(predicat1.lower()),tense = "present",mood ="indicative",aspect = "progressive")
+                    
+                    predicat0 = traiter_predicat(other_noeds[1],predicat0)
+                    predicat1 = traiter_predicat(degree2,predicat1)
+
                     obj1 = get_name(G.nodes[other_noeds[0]])
                     obj0 = get_name(G.nodes[other_noeds[1]])
                 
-                if predicat0 not in ['has','of','has a','of a'] and 'is ' not in predicat0:
-                    predicat0 = 'is ' + predicat0
                 
-                if predicat1 not in ['has','of','has a','of a'] and 'is ' not in predicat1:
-                    predicat1 = 'is ' + predicat1
                 obj2 = get_name(G.nodes[degree2])
+
+                attributes_obj0 = " and ".join(get_attributes(G.nodes[other_noeds[0]])) 
+                attributes_obj1 = " and ".join(get_attributes(G.nodes[other_noeds[1]])) 
+                attributes_obj2 = " and ".join(get_attributes(G.nodes[degree2]))
+
+                det0 = selection_determinant(obj0,attributes_obj0)
+                det1 = selection_determinant(obj1,attributes_obj1)
+                det2 = selection_determinant(obj2,attributes_obj2)
                 
                 if (obj0 == obj1):
-                    return " ".join(["a",obj0,predicat0.lower(),'a',obj2,'that',predicat1.lower(),"another",obj1])
+                    return " ".join([det0,attributes_obj0,obj0,predicat0.lower(),det2,attributes_obj2,obj2,'that',
+                                    predicat1.lower(),"another",attributes_obj1,obj1])
                     
                 # si noms different :
                 if (obj0 != obj1 ):
@@ -414,12 +461,59 @@ def graph_to_sentence(G):
         edges = choose_two_edges(G,central_node)
         print("edges:",edges)
         H = G.edge_subgraph(edges)
+        print(H.edges(data = True))
         return graph_to_sentence(H)
+
+
+def check_has(G):
+    for e in G.edges(data = True):
+        if e[2]["predicate"] in ["has",'has a']:
+            return True
+    return False
+
+def remove_has(G):
+    skip = []
+    l = list(G.edges(data = True))
+    
+    for e in l:
+        if e[2]["predicate"] in ["has","has a"] and (e[0],e[1]) not in skip:
+            lo =  list(G.out_edges(e[1],data = True))
+            for o in lo:
+                print("out : ",o)
+                if not G.has_edge(e[0],o[1]):
+                    G.add_edges_from([(e[0],o[1],{"predicate":o[2]["predicate"],"weight":o[2]["weight"]})])
+                    if o[2]["predicate"] in ["has","has a"]:
+                        skip.append((o[0],o[1]))
+                if o[0] == "1804944":
+                    print(G.edges(data = True))
+                G.remove_edge(o[0],o[1])
+            li =  list(G.in_edges(e[1],data = True))
+            for i in li:
+                print("in : ",i)
+                if e[0] != i[0]:
+                    if not G.has_edge(i[0],e[0]):
+                        G.add_edges_from([(i[0],e[0],{"predicate":i[2]["predicate"],"weight":i[2]["weight"]})])
+                        if i[2]["predicate"] in ["has","has a"]:
+                            skip.append((i[0],i[1]))
+                    G.remove_edge(i[0],i[1])
+                
+            try :
+                G.remove_edge(e[0],e[1])
+            except:
+                print("esacped error")
+    return G
+
+                
         
 
 def generate_sentence(image_id,method,nb_obj,nb_rel,nb_att,seuil):
-
+    
     G = CreateGraph(image_id,nb_obj,nb_rel,nb_att)
+
+    while check_has(G):
+        remove_has(G)
+
+    
     Cluster = centrality_cluster(G,seuil,method)
     
     print(Cluster.graph)
