@@ -52,6 +52,30 @@ def treat_xml_obj(x:ET.Element,attrs:list) -> dict:
     r['attributes'] = attributes
     return r
 
+Relation_Weight = None
+
+def getWeight(subject:str,object:str,predicate:str) -> int:
+    global Relation_Weight
+
+    if not Relation_Weight:
+        if Tout_Objs and Tout_Preds:
+            Relation_Weight = [d for d in csv.DictReader(open('./params/relations_params.csv')) if d['subject'] in Tout_Objs and d['object'] in Tout_Objs and d['predicate'] in Tout_Preds]
+        elif Tout_Objs:
+            Relation_Weight = [d for d in csv.DictReader(open('./params/relations_params.csv')) if d['subject'] in Tout_Objs and d['object'] in Tout_Objs]
+        elif Tout_Preds:
+            Relation_Weight = [d for d in csv.DictReader(open('./params/relations_params.csv')) if d['predicate'] in Tout_Preds]
+        else:
+            Relation_Weight = [d for d in csv.DictReader(open('./params/relations_params.csv'))]
+    
+    l = [x for x in Relation_Weight if x['subject'] == subject and x["object"] == object]
+
+    for i in l:
+        if i['predicate'] == predicate:
+            return l.index(i)
+
+    return 0 # il faut peut être trouvé une autre valeur par défaut
+
+
 def CreateGraph(image_id:str,nb_obj = 0,nb_rel = 0,nb_attr = 0):
     """
     G c'est le scene graph de l'image dont l'id VG est image_id avec ces noeuds les object id et 
@@ -73,12 +97,14 @@ def CreateGraph(image_id:str,nb_obj = 0,nb_rel = 0,nb_attr = 0):
     global Tout_Objs
     global Tout_Preds
     global Tout_Attr
+    global Relation_Weight
     global Max
 
     if nb_obj>Max or nb_rel>Max:
         Max = max(nb_obj,nb_rel)
         Tout_Objs = None
         Tout_Preds = None
+        Relation_Weight = None
 
     if nb_obj and not Tout_Objs:
         obj_csv = csv.reader(open('./params/object_params.csv'))
@@ -134,7 +160,7 @@ def CreateGraph(image_id:str,nb_obj = 0,nb_rel = 0,nb_attr = 0):
                             x.findtext('./subject'),x.findtext('./object'),
                             {
                                 'predicate':x.findtext('./predicate'),
-                                'weight':preds.index(x.findtext('./predicate')) if nb_rel else 0
+                                'weight': getWeight(G.nodes[x.findtext('./subject')]['name'],G.nodes[x.findtext('./object')]['name'],x.findtext('./predicate'))
                             }
                         ) 
                       for x in img.findall('./relationships/relationship')
