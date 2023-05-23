@@ -241,7 +241,6 @@ def choose_two_edges(G,central):
                     for x in G.in_edges(central,data = True):
                         if x[2]['predicate'].lower() == p:
                             edges.append((x[0],x[1]))
-                            break
                 return edges
             else : #0
                 for p in predicate_to_exclude:
